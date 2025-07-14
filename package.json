@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "build": "bun run build.ts",
+    "dev": "bun run build.ts --dev"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@webgpu/types": "^0.1.64"
+  },
+  "dependencies": {
+    "wgpu-matrix": "^3.4.0"
+  }
+}
