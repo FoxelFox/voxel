@@ -8,6 +8,7 @@
     "@webgpu/types": "^0.1.64"
   },
   "dependencies": {
+    "lit": "^3.3.1",
     "wgpu-matrix": "^3.4.0"
   }
 }

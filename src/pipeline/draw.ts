@@ -23,10 +23,9 @@ export class Draw {
         entryPoint: "vs_main",
         buffers: [
           {
-            arrayStride: 32,
+            arrayStride: 16,
             attributes: [
-              { shaderLocation: 0, offset: 0, format: "float32x3" }, // position
-              { shaderLocation: 1, offset: 16, format: "float32x3" }, // normal
+              { shaderLocation: 0, offset: 0, format: "float32x4" }, // position
             ],
           },
         ],
@@ -75,7 +74,7 @@ export class Draw {
     // import { mat4, vec3 } from 'wgpu-matrix';
 
     // Update camera matrices
-    const projectionMatrix = mat4.perspective((2 * Math.PI) / 5, canvas.width / canvas.height, 1, 100.0);
+    const projectionMatrix = mat4.perspective((2 * Math.PI) / 5, canvas.width / canvas.height, 1, 1000.0);
 
     // --- View Matrix (Camera) ---
     // Stays the same. Defines the camera's viewpoint.

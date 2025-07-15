@@ -4,5 +4,7 @@
 		"module": "ESNext",
 		"moduleResolution": "node",
     "types": ["@webgpu/types", "@types/bun"],
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false
   }
 }

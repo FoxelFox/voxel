@@ -1,15 +1,17 @@
-import { device } from "../index";
+import { device, statistics } from "../index";
 import shader from "./voxel-mesh.wgsl" with {type: "text"};
 
 export class VoxelMesh {
 
 
   computePipeline: GPUComputePipeline
-  gridSize = { x: 64, y: 64, z: 64 };
+  gridSize = { x: 256, y: 256, z: 256 };
   bindGroup: GPUBindGroup;
   vertexCounterBuffer: GPUBuffer
   vertexBuffer: GPUBuffer
   vertexCount = 0;
+
+  inProgress = false;
 
   constructor() {
 
@@ -26,7 +28,7 @@ export class VoxelMesh {
         (y - this.gridSize.y / 2) ** 2 +
         (z - this.gridSize.z / 2) ** 2
       );
-      if (dist < this.gridSize.x / 2.5) {
+      if (dist < this.gridSize.x / 2.0) {
         voxelData[i] = 1;
       } else {
         voxelData[i] = 0;
@@ -34,8 +36,8 @@ export class VoxelMesh {
     }
 
     // 3. Create Buffers
-    const maxVertices = numVoxels / 2 * 9; // Max possible vertices
-    const vertexStructSize = 4 * 4 + 4 * 4; // vec3f position + vec3f normal (bytes)
+    const maxVertices = numVoxels / 2 * 9; // Max possible vertices (obbi)
+    const vertexStructSize = 1 * 1;
 
     const gridSizeBuffer = device.createBuffer({
       size: 3 * 4,
@@ -50,7 +52,7 @@ export class VoxelMesh {
     this.vertexBuffer = device.createBuffer({
       label: "Vertex Buffer",
       size: maxVertices * vertexStructSize,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
     this.vertexCounterBuffer = device.createBuffer({
@@ -89,35 +91,45 @@ export class VoxelMesh {
   }
 
   update() {
-    // 7. Dispatch Compute Shader
-    const commandEncoder = device.createCommandEncoder();
-    const computePass = commandEncoder.beginComputePass();
-    computePass.setPipeline(this.computePipeline);
-    computePass.setBindGroup(0, this.bindGroup);
-    computePass.dispatchWorkgroups(
-      Math.ceil(this.gridSize.x / 4),
-      Math.ceil(this.gridSize.y / 4),
-      Math.ceil(this.gridSize.z / 4)
-    );
-    computePass.end();
+    if (!this.inProgress) {
+      this.inProgress = true
+      let start = performance.now();
 
-    // (Optional) Read back the number of generated vertices
-    const readbackBuffer = device.createBuffer({
-      size: 4,
-      usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-    });
-    commandEncoder.copyBufferToBuffer(this.vertexCounterBuffer, 0, readbackBuffer, 0, 4);
+      // 7. Dispatch Compute Shader
+      const commandEncoder = device.createCommandEncoder();
+      const computePass = commandEncoder.beginComputePass();
+      computePass.setPipeline(this.computePipeline);
+      computePass.setBindGroup(0, this.bindGroup);
+      computePass.dispatchWorkgroups(
+        Math.ceil(this.gridSize.x / 4),
+        Math.ceil(this.gridSize.y / 4),
+        Math.ceil(this.gridSize.z / 4)
+      );
+      computePass.end();
 
-    // Submit to GPU
-    device.queue.submit([commandEncoder.finish()]);
+      // (Optional) Read back the number of generated vertices
+      const readbackBuffer = device.createBuffer({
+        size: 4,
+        usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+      });
+      commandEncoder.copyBufferToBuffer(this.vertexCounterBuffer, 0, readbackBuffer, 0, 4);
 
-    // Read the result
-    readbackBuffer.mapAsync(GPUMapMode.READ).then(() => {
-      const result = new Uint32Array(readbackBuffer.getMappedRange());
-      this.vertexCount = result[0];
-      console.log(`Generated ${this.vertexCount} vertices.`);
-      readbackBuffer.unmap();
-    });
+      // Submit to GPU
+      device.queue.submit([commandEncoder.finish()]);
 
+      // Read the result
+      readbackBuffer.mapAsync(GPUMapMode.READ).then(() => {
+        const result = new Uint32Array(readbackBuffer.getMappedRange());
+        this.vertexCount = result[0];
+        readbackBuffer.unmap();
+        device.queue.writeBuffer(this.vertexCounterBuffer, 0, new Uint32Array([0]));
+        
+        statistics.vertices =  this.vertexCount;
+
+        statistics.meshGeneration = (statistics.meshGeneration * 99 + (performance.now() - start)) / 100;
+
+        this.inProgress = false;
+      });
+    }
   }
 }

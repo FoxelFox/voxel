@@ -1,5 +1,14 @@
 #import "vertex.wgsl"
 
+const CUBE_NORMALS = array<vec3<f32>, 6>(
+  vec3(1.0, 0.0, 0.0),  // +X
+  vec3(-1.0, 0.0, 0.0), // -X
+  vec3(0.0, 1.0, 0.0),  // +Y
+  vec3(0.0, -1.0, 0.0), // -Y
+  vec3(0.0, 0.0, 1.0),  // +Z
+  vec3(0.0, 0.0, -1.0)  // -Z
+);
+
 // Uniforms for camera and projection matrices
 struct Uniforms {
   modelViewProjectionMatrix: mat4x4<f32>,
@@ -17,8 +26,8 @@ struct VertexOutput {
 @vertex
 fn vs_main(in: Vertex) -> VertexOutput {
   var out: VertexOutput;
-  out.position = uniforms.modelViewProjectionMatrix * vec4<f32>(in.position, 1.0);
-  out.normal = in.normal;
+  out.position = uniforms.modelViewProjectionMatrix * vec4<f32>(in.position.xyz, 1.0);
+  out.normal = CUBE_NORMALS[u32(in.position.w)];
   return out;
 }
 

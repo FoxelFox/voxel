@@ -6,10 +6,10 @@ const result = await Bun.build({
   entrypoints: ['./src/index.html'],
   outdir: './dist',
   plugins: [
-    wgsl({ minify: isDev})
+    wgsl({ minify: !isDev})
   ],
   target: 'browser',
-  minify: isDev,
+  minify: !isDev,
   sourcemap: isDev ? 'inline': undefined,
   naming: {
     chunk: '[name].[ext]'
