@@ -11,6 +11,9 @@ const result = await Bun.build({
   target: 'browser',
   minify: !isDev,
   sourcemap: isDev ? 'inline': undefined,
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production')
+  },
   naming: {
     chunk: '[name].[ext]'
   }

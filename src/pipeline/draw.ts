@@ -69,6 +69,19 @@ export class Draw {
 
   update() {
 
+    if (voxel.vertexCount === 0) {
+      return;
+    }
+
+    if (canvas.width !== this.depthTexture.width || canvas.height !== this.depthTexture.height) {
+      this.depthTexture.destroy();
+      this.depthTexture = device.createTexture({
+        size: [canvas.width, canvas.height],
+        format: "depth24plus",
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      });
+    }
+
     // Update camera matrices
     // Assuming you have imported the library, e.g.:
     // import { mat4, vec3 } from 'wgpu-matrix';
@@ -78,14 +91,14 @@ export class Draw {
 
     // --- View Matrix (Camera) ---
     // Stays the same. Defines the camera's viewpoint.
-    const eye = [voxel.gridSize.x, voxel.gridSize.y, voxel.gridSize.z * 1.5];
-    const center = [voxel.gridSize.x / 2, voxel.gridSize.y / 2, voxel.gridSize.z / 2];
+    const eye = [voxel.gridSize.x, voxel.gridSize.y * 1.125, voxel.gridSize.z * 1.5];
+    const center = [voxel.gridSize.x / 2, voxel.gridSize.y / 2.5, voxel.gridSize.z / 2];
     const viewMatrix = mat4.lookAt(eye, center, [0, 1, 0]);
 
     // --- Model Matrix (Object) ---
     // We build the rotation by creating individual transformation matrices and multiplying them.
     const modelCenter = [voxel.gridSize.x / 2, voxel.gridSize.y / 2, voxel.gridSize.z / 2];
-    const now = Date.now() / 1000;
+    const now = Date.now() / 10000;
 
     // Create the three transformations needed to rotate around the center
     const translateToOrigin = mat4.translation(vec3.negate(modelCenter)); // 1. T_inv
@@ -110,7 +123,7 @@ export class Draw {
     const renderPassDescriptor: GPURenderPassDescriptor = {
       colorAttachments: [{
         view: textureView,
-        clearValue: { r: 0.1, g: 0.1, b: 0.2, a: 1.0 },
+        clearValue: { r: 0., g: 0.2, b: 0.4, a: 1.0 },
         loadOp: "clear",
         storeOp: "store",
       }],
@@ -125,11 +138,8 @@ export class Draw {
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     passEncoder.setPipeline(this.renderPipeline);
     passEncoder.setBindGroup(0, this.renderBindGroup);
-    passEncoder.setVertexBuffer(0, voxel.vertexBuffer); // Set the buffer from the compute shader
-
-    // We draw the number of vertices we got from the compute shader
-    const vertexCountToDraw = voxel.vertexCount;
-    passEncoder.draw(vertexCountToDraw);
+    passEncoder.setVertexBuffer(0, voxel.vertexBuffer);
+    passEncoder.draw(voxel.vertexCount);
 
     passEncoder.end();
     device.queue.submit([commandEncoder.finish()]);

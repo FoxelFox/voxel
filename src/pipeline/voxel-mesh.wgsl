@@ -1,15 +1,11 @@
 #import "vertex.wgsl"
 
-// Uniforms passed from JavaScript
+// input
 @group(0) @binding(0) var<uniform> grid_size: vec3<u32>;
-
-// Input voxel data (e.g., 1 for solid, 0 for air)
 @group(0) @binding(1) var<storage, read> voxel_grid: array<u32>;
 
-// Output vertex buffer
+// output
 @group(0) @binding(2) var<storage, read_write> vertex_buffer: array<Vertex>;
-
-// Atomic counter for the vertex buffer index
 @group(0) @binding(3) var<storage, read_write> vertex_counter: atomic<u32>;
 
 // --- NEW: Explicit Cube Triangle Vertices ---
@@ -60,7 +56,6 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
   for (var i = 0u; i < 6u; i = i + 1u) {
     if (get_voxel(voxel_coord + neighbors[i]) == 0) {
-      // This face is visible. Copy the 6 correct vertices.
       let vertex_index = atomicAdd(&vertex_counter, 6u);
       let face_vertex_offset = i * 6u;
 

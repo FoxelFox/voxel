@@ -41,17 +41,17 @@ loop();
 document.getElementsByTagName('canvas')[0].setAttribute('style', 'position: fixed;')
 
 
-
 export function loop() {
   
 
   gpu.update();
-
-  voxel.update();
-
+  
+  
   for(const uniform of uniforms) {
     uniform.update();
   }
+
+  voxel.update();
 
   for(const pipeline of pipelines) {
     pipeline.update();

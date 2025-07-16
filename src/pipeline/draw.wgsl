@@ -38,6 +38,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
   // Simple directional lighting
   let lightDirection = normalize(vec3<f32>(0.5, 1.0, -0.8));
   let light = max(dot(in.normal, lightDirection), 0.0);
-  let color = vec3<f32>(0.8, 0.1, 0.4) * (light * 0.7 + 0.3);
+  let color = vec3<f32>(1.0, 0.4, 0.4) * (light * 0.7 + 0.3);
   return vec4<f32>(color, 1.0);
 }
