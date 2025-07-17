@@ -1,5 +1,5 @@
 import { mat4, vec3 } from "wgpu-matrix";
-import { canvas, context, device, voxel } from "../index";
+import { canvas, context, device, voxel, worldGrid } from "../index";
 import shader from "./draw.wgsl" with {type: "text"};
 
 
@@ -69,10 +69,6 @@ export class Draw {
 
   update() {
 
-    if (voxel.vertexCount === 0) {
-      return;
-    }
-
     if (canvas.width !== this.depthTexture.width || canvas.height !== this.depthTexture.height) {
       this.depthTexture.destroy();
       this.depthTexture = device.createTexture({
@@ -102,7 +98,7 @@ export class Draw {
 
     // Create the three transformations needed to rotate around the center
     const translateToOrigin = mat4.translation(vec3.negate(modelCenter)); // 1. T_inv
-    const rotation = mat4.rotationY(now * 0.5);                           // 2. R
+    const rotation = mat4.rotationY(-.25);                           // 2. R
     const translateBack = mat4.translation(modelCenter);                 // 3. T
 
     // Combine them to create the final model matrix: M = T * R * T_inv
@@ -136,10 +132,17 @@ export class Draw {
     };
 
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-    passEncoder.setPipeline(this.renderPipeline);
-    passEncoder.setBindGroup(0, this.renderBindGroup);
-    passEncoder.setVertexBuffer(0, voxel.vertexBuffer);
-    passEncoder.draw(voxel.vertexCount);
+
+    const chunks = worldGrid.getChunksInRadius([0, 0, 0], 1);
+
+    for (const chunk of chunks) {
+      if (chunk.vertexCount > 0) {
+        passEncoder.setPipeline(this.renderPipeline);
+        passEncoder.setBindGroup(0, this.renderBindGroup);
+        passEncoder.setVertexBuffer(0, chunk.vertexBuffer);
+        passEncoder.draw(chunk.vertexCount);
+      }
+    }
 
     passEncoder.end();
     device.queue.submit([commandEncoder.finish()]);

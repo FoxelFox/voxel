@@ -1,9 +1,9 @@
 import { contextUniform, device, statistics } from "../index";
 import meshShader from "./voxel-mesh.wgsl" with {type: "text"};
 import gridShader from "./voxel-grid.wgsl" with {type: "text"};
+import { Chunk } from "../data/chunk";
 
 export class VoxelMesh {
-
 
   meshComputePipeline: GPUComputePipeline
   gridComputePipeline: GPUComputePipeline
@@ -11,13 +11,13 @@ export class VoxelMesh {
   gridBindGroup: GPUBindGroup;
   uniformBindGroup: GPUBindGroup;
 
-  gridSize = { x: 128, y: 128, z: 128 };
+  gridSize = { x: 256, y: 256, z: 256 };
   
   vertexCounterBuffer: GPUBuffer
   vertexBuffer: GPUBuffer
-  vertexCount = 0;
 
-  inProgress = false;
+  queue: Chunk[] = []
+  activeChunk: Chunk;
 
   constructor() {
 
@@ -25,7 +25,8 @@ export class VoxelMesh {
     const numVoxels = this.gridSize.x * this.gridSize.y * this.gridSize.z;
 
     // 3. Create Buffers
-    const maxVertices = numVoxels * 18; // Max possible vertices
+    //const maxVertices = numVoxels * 18; // Max possible vertices
+    const maxVertices = numVoxels * 15;
     const vertexStructSize = 4 * 4;
 
     const gridSizeBuffer = device.createBuffer({
@@ -41,7 +42,7 @@ export class VoxelMesh {
     this.vertexBuffer = device.createBuffer({
       label: "Vertex Buffer",
       size: maxVertices * vertexStructSize,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
     });
 
     this.vertexCounterBuffer = device.createBuffer({
@@ -104,8 +105,13 @@ export class VoxelMesh {
   }
 
   update() {
-    if (!this.inProgress) {
-      this.inProgress = true
+    if (!this.activeChunk) {
+      this.activeChunk = this.queue.shift();
+
+      if (!this.activeChunk) {
+        return;
+      }
+
       let start = performance.now();
 
       // 7. Dispatch Compute Shader
@@ -144,19 +150,40 @@ export class VoxelMesh {
       // Submit to GPU
       device.queue.submit([commandEncoder.finish()]);
 
-      // Read the result
       readbackBuffer.mapAsync(GPUMapMode.READ).then(() => {
         const result = new Uint32Array(readbackBuffer.getMappedRange());
-        this.vertexCount = result[0];
+        const chunkVertexCount = result[0];
         readbackBuffer.unmap();
         device.queue.writeBuffer(this.vertexCounterBuffer, 0, new Uint32Array([0]));
         
-        statistics.vertices =  this.vertexCount;
-
+        statistics.vertices =  chunkVertexCount;
         statistics.meshGeneration = (statistics.meshGeneration * 99 + (performance.now() - start)) / 100;
+        
+        const chunkVertexBuffer = device.createBuffer({
+          label: `Vertex Buffer for chunk ${this.activeChunk.id}`,
+          size: chunkVertexCount * 16,
+          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        });
 
-        this.inProgress = false;
+
+        const commandEncoder = device.createCommandEncoder();
+        commandEncoder.copyBufferToBuffer(this.vertexBuffer, 0, chunkVertexBuffer, 0, chunkVertexCount * 16);
+        device.queue.submit([commandEncoder.finish()]);
+        device.queue.onSubmittedWorkDone().then(() => {
+
+          if (this.activeChunk.vertexBuffer) {
+            this.activeChunk.vertexBuffer.destroy();
+          }
+
+          this.activeChunk.vertexBuffer = chunkVertexBuffer;
+          this.activeChunk.vertexCount = chunkVertexCount;
+          this.activeChunk = undefined;
+        })
       });
     }
+  }
+
+  enqueueChunkUpdate(chunk: Chunk) {
+    this.queue.push(chunk);
   }
 }

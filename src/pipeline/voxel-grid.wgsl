@@ -14,9 +14,9 @@ fn to1D(id: vec3<u32>) -> u32 {
 
 @compute @workgroup_size(4, 4, 4)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-    let random_value = noise3(vec3<f32>(id) / 25.0 - vec3<f32>(context.time, context.time, context.time) * 5);
+    let random_value = noise3(vec3<f32>(id) / 50.0 - vec3<f32>(context.time, context.time, context.time) * 1 );
     var zero_or_one: u32;
-    if (random_value > (sin(context.time) * 0.5 + 0.5)) {
+    if (random_value > (sin(context.time / 10) * cos(context.time/10) * 0.5 + 0.5)) {
       zero_or_one = 1u;
      } else {
       zero_or_one = 0u;

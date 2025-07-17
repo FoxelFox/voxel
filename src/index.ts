@@ -4,6 +4,7 @@ import { ContextUniform } from "./data/context";
 import { VoxelMesh } from "./pipeline/voxel-mesh";
 import { Draw } from "./pipeline/draw";
 import { UxStats } from "./ux/stats";
+import { WorldGrid } from "./data/world-grid";
 
 
 export interface Statistics {
@@ -22,6 +23,7 @@ export const mouse = gpu.mouse;
 export const time = gpu.time;
 export const contextUniform = new ContextUniform();
 export const voxel = new VoxelMesh();
+export const worldGrid = new WorldGrid();
 export const statistics : Statistics = {
   fps: 60,
   vertices: 0,
@@ -29,11 +31,12 @@ export const statistics : Statistics = {
 }
 
 
-
 const uniforms = [contextUniform];
 const pipelines = [new Draw()];
 let ux: UxStats;
 let start: number = 0;
+
+worldGrid.generateChunk([0, 0, 0]);
 
 loop();
 
@@ -50,6 +53,8 @@ export function loop() {
   for(const uniform of uniforms) {
     uniform.update();
   }
+
+  worldGrid.updateChunk([0, 0, 0]);
 
   voxel.update();
 

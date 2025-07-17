@@ -19,7 +19,7 @@ export class UxStats extends LitElement {
     return html`
       <div>FPS: ${Math.round(this.statistics?.fps)}</div>
       <div>Mesh ms: ${Math.round(this.statistics?.meshGeneration)}</div>
-      <div>Vertices: ${this.statistics?.vertices}</div>
+      <div>Triangles: ${(this.statistics?.vertices/3).toLocaleString()}</div>
     `;
   }
 }
